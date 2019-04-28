@@ -1,5 +1,5 @@
 ---
-title: "Practical Machine Learning: Prediction Assingment Writeup"
+title: "Practical Machine Learning: Prediction Assignment Writeup"
 author: "Karan Shishoo"
 date: "April 28, 2019"
 output: html_document
@@ -27,9 +27,9 @@ The data for this project come from this source: <http://web.archive.org/web/201
 
 ## Process
 
-### Reproduceability
+### Reproducibility
 
-A random seed (4289) was selected for the code to ensure reproduciablity. In order to validate the results produced below use the same seed.
+A random seed (42819) was selected for the code to ensure reproducibility In order to validate the results produced below use the same seed.
 
 ### Model building
 
@@ -42,11 +42,11 @@ Six young health participants were asked to perform one set of 10 repetitions of
 * lowering the dumbbell only halfway (Class D)
 * throwing the hips to the front (Class E)
 
-The prdictions will be evaluated by maximizing the accuraccy and mimizing the out of sample error. All possible variables avaliable after cleaning will be used to build the model. Both decision tree and random forest algorithms will be used as they excel at identifying important features for classification. The better model of the two will be selected.
+The predictions  will be evaluated by maximizing the accuracy  and minimizing  the out of sample error. All possible variables available  after cleaning will be used to build the model. Both decision tree and random forest algorithms will be used as they excel at identifying important features for classification. The better model of the two will be selected.
 
 ### Cross-Validation
 
-Cross-Validation will be performed to ensure that our model is not overfit and so that the most accurate model will be selecetd. The training data will be split 7:3 to create a subTraining set and a subTesting set for this.
+Cross-Validation will be performed to ensure that our model is not overfit and so that the most accurate model will be selected The training data will be split 7:3 to create a subTraining set and a subTesting set for this.
 
 ## Initial Setup Code
 
@@ -150,7 +150,7 @@ ose <- 1 - as.numeric(confusionMatrix(subTesting$classe, predictDTree)$overall[1
 rm(predictDTree)
 rm(modelDTree)
 ```  
-The Estimated accuraccy is `r accuracy[1]*100`% while the out of sample error is `r ose*100`%. 
+The Estimated accuracy  is `r accuracy[1]*100`% while the out of sample error is `r ose*100`%. 
 
 ### Random Forest model
 [done using 5-fold cross validation]
@@ -168,10 +168,10 @@ accuracy <- postResample(predictRF, subTesting$classe)
 ose <- 1 - as.numeric(confusionMatrix(subTesting$classe, predictRF)$overall[1])
 rm(predictRF)
 ```
-The Estimated accuraccy is `r accuracy[1]*100`% while the out of sample error is `r ose*100`%. 
+The Estimated accuracy   is `r accuracy[1]*100`% while the out of sample error is `r ose*100`%. 
 
 ##Test set prediction and output
-From the estimated accuraccies it is evident that Random Forest is the more optimal model, thus it is used in generating the predictions for the test set.
+From the estimated accuracies  it is evident that Random Forest is the more optimal model, thus it is used in generating the predictions for the test set.
 
 ```{r warning=FALSE, error=FALSE}
 pml_write_files = function(x){
