@@ -25,4 +25,171 @@ The test data are available here:
 
 The data for this project come from this source: <http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
 
+## Process
+
+### Reproduceability
+
+A random seed (4289) was selected for the code to ensure reproduciablity. In order to validate the results produced below use the same seed.
+
+### Model building
+
+The outcome variable ("Classe") has five types, as noted from source^[<http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har>] -
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions:
+
+* exactly according to the specification (Class A)
+* throwing the elbows to the front (Class B)
+* lifting the dumbbell only halfway (Class C)
+* lowering the dumbbell only halfway (Class D)
+* throwing the hips to the front (Class E)
+
+The prdictions will be evaluated by maximizing the accuraccy and mimizing the out of sample error. All possible variables avaliable after cleaning will be used to build the model. Both decision tree and random forest algorithms will be used as they excel at identifying important features for classification. The better model of the two will be selected.
+
+### Cross-Validation
+
+Cross-Validation will be performed to ensure that our model is not overfit and so that the most accurate model will be selecetd. The training data will be split 7:3 to create a subTraining set and a subTesting set for this.
+
+## Initial Setup Code
+
+Installing libraries and setting seed
+```{r warning=FALSE, error=FALSE}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(corrplot)
+library(RColorBrewer)
+library(rattle)
+set.seed(42819)
+```
+
+Downloading the data
+
+```{r warning=FALSE, error=FALSE}
+trainUrl <-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+trainFile <- "./data/pml-training.csv"
+testFile  <- "./data/pml-testing.csv"
+
+if (!file.exists("./data")) {
+  dir.create("./data")
+}
+
+if (!file.exists(trainFile)) {
+  download.file(trainUrl, destfile = trainFile, method = "curl")
+}
+
+if (!file.exists(testFile)) {
+  download.file(testUrl, destfile = testFile, method = "curl")
+}
+
+training <- read.csv(trainFile)
+testing <- read.csv(testFile)
+
+rm(trainFile)
+rm(testFile)
+```
+
+
+Cleaning the Data (Removing ID)
+```{r warning=FALSE, error=FALSE}
+training <- training[c(-1)]
+```
+
+Cleaning the Data (Near Zero Variance)
+
+```{r warning=FALSE, error=FALSE}
+DataNZV <- nearZeroVar(training, saveMetrics=TRUE)
+training <- training[, !DataNZV$nzv]
+rm(DataNZV)
+```
+
+Cleaning the Data (Contains NA's or not much contribution)
+
+```{r warning=FALSE, error=FALSE}
+condition <- (colSums(is.na(training)) == 0)
+training <- training[, condition]
+
+regex <- grepl("^X|timestamp|user_name", names(training))
+training <- training[, !regex]
+
+rm(condition)
+rm(regex)
+```
+
+Correlation Matrix:
+```{r warning=FALSE, error=FALSE}
+corrplot(cor(training[, -length(names(training))]), method = "color", tl.cex = 0.5)
+```
+
+
+Splitting the training data
+
+```{r warning=FALSE, error=FALSE}
+inTrain <- createDataPartition(y=training$classe, p=0.70, list=FALSE)
+subTraining <- training[inTrain, ]; subTesting <- training[-inTrain, ]
+rm(inTrain)
+```
+
+## Data Modeling
+
+
+### Decision Tree model
+```{r warning=FALSE, error=FALSE}
+modelDTree <- rpart(classe ~ ., data = subTraining, method = "class")
+fancyRpartPlot(modelDTree)
+```
+
+### Decision Tree validation
+
+```{r warning=FALSE, error=FALSE}
+predictDTree <- predict(modelDTree, subTesting, type = "class")
+confusionMatrix(subTesting$classe, predictDTree)
+accuracy <- postResample(predictDTree, subTesting$classe)
+ose <- 1 - as.numeric(confusionMatrix(subTesting$classe, predictDTree)$overall[1])
+rm(predictDTree)
+rm(modelDTree)
+```  
+The Estimated accuraccy is `r accuracy[1]*100`% while the out of sample error is `r ose*100`%. 
+
+### Random Forest model
+[done using 5-fold cross validation]
+```{r warning=FALSE, error=FALSE}
+modelRF <- train(classe ~ ., data = subTraining, method = "rf", trControl = trainControl(method = "cv", 5), ntree = 250)
+modelRF
+```  
+
+### Random Forest validation
+
+```{r warning=FALSE, error=FALSE}
+predictRF <- predict(modelRF, subTesting)
+confusionMatrix(subTesting$classe, predictRF)
+accuracy <- postResample(predictRF, subTesting$classe)
+ose <- 1 - as.numeric(confusionMatrix(subTesting$classe, predictRF)$overall[1])
+rm(predictRF)
+```
+The Estimated accuraccy is `r accuracy[1]*100`% while the out of sample error is `r ose*100`%. 
+
+##Test set prediction and output
+From the estimated accuraccies it is evident that Random Forest is the more optimal model, thus it is used in generating the predictions for the test set.
+
+```{r warning=FALSE, error=FALSE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, col.names = FALSE)
+  }
+}
+
+pml_write_files(predict(modelRF, testing[, -length(names(testing))]))
+
+rm(accuracy)
+rm(ose)
+rm(modelRF)
+rm(training)
+rm(testing)
+rm(validation)
+rm(pml_write_files)
+```  
 
